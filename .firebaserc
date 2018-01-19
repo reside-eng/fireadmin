@@ -2,7 +2,8 @@
   "projects": {
     "master": "fireadmin-stage",
     "prod": "fireadmin-33d82",
-    "default": "fireadmin-stage"
+    "default": "fireadmin-stage",
+    "test": "fireadmin-stage"
   },
   "ci": {
     "createConfig": {
