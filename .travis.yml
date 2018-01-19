@@ -27,12 +27,12 @@ cache:
   yarn: true
 
 install:
-  - npm i firebase-ci@alpha
   - yarn install
+  - yarn add firebase-ci@alpha
 
 script:
   # create env specific src/config.js
-  - ./node_modules/.bin/firebase-ci createConfig
+  - firebase-ci createConfig
   - npm run lint
   # - npm run test
   - npm run build
@@ -44,4 +44,4 @@ addons:
 after_success:
   # Use firebase-ci to deploy hosting, RTDB rules, firestore rules, functions,
   # and functions config (from mapEnv settings in .firebaserc)
-  - ./node_modules/.bin/firebase-ci deploy
+  - firebase-ci deploy
