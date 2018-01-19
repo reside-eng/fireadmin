@@ -12,7 +12,6 @@
     "start:simple": "cross-env NODE_ENV=development node build/scripts/start",
     "test": "cross-env NODE_ENV=test karma start build/karma.config",
     "test:watch": "npm test -- --watch",
-    "functions:build": "npm run build:functions",
     "lint": "eslint .",
     "lint:fix": "npm run lint -- --fix",
     "codecov": "cat coverage/*/lcov.info | codecov",
