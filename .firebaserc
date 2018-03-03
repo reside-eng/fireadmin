@@ -1,9 +1,9 @@
 {
   "projects": {
-    "master": "fireadmin-stage",
-    "prod": "fireadmin-33d82",
-    "stage": "fireadmin-stage",
-    "default": "fireadmin-stage"
+    "master": "reside-fireadmin",
+    "prod": "reside-fireadmin",
+    "stage": "reside-fireadmin",
+    "default": "reside-fireadmin"
   },
   "ci": {
     "createConfig": {
@@ -11,12 +11,12 @@
         "version": "${npm_package_version}",
         "env": "stage",
         "firebase": {
-          "apiKey": "${STAGE_FIREBASE_API_KEY}",
-          "authDomain": "fireadmin-stage.firebaseapp.com",
-          "databaseURL": "https://fireadmin-stage.firebaseio.com",
-          "projectId": "fireadmin-stage",
-          "storageBucket": "fireadmin-stage.appspot.com",
-          "messagingSenderId": "566109548798"
+          "apiKey": "${PROD_FIREBASE_API_KEY}",
+          "authDomain": "reside-fireadmin.firebaseapp.com",
+          "databaseURL": "https://reside-fireadmin.firebaseio.com",
+          "projectId": "reside-fireadmin",
+          "storageBucket": "reside-fireadmin.appspot.com",
+          "messagingSenderId": "720146943433"
         },
         "reduxFirebase": {
           "userProfile": "users",
@@ -26,11 +26,11 @@
         },
         "analyticsTrackingId": "${GA_TRACKING_ID}",
         "googleApis": {
-          "apiKey": "${STAGE_GOOGLE_API_KEY}"
+          "apiKey": "${PROD_GOOGLE_API_KEY}"
         },
         "algolia": {
-          "appId": "${STAGE_ALGOLIA_APP_ID}",
-          "apiKey": "${STAGE_ALGOLIA_BROWSER_KEY}"
+          "appId": "${PROD_ALGOLIA_APP_ID}",
+          "apiKey": "${PROD_ALGOLIA_BROWSER_KEY}"
         }
       },
       "prod": {
@@ -38,10 +38,10 @@
         "env": "production",
         "firebase": {
           "apiKey": "${PROD_FIREBASE_API_KEY}",
-          "authDomain": "fireadmin-33d82.firebaseapp.com",
-          "databaseURL": "https://fireadmin-33d82.firebaseio.com",
-          "projectId": "fireadmin-33d82",
-          "storageBucket": "fireadmin-33d82.appspot.com"
+          "authDomain": "reside-fireadmin.firebaseapp.com",
+          "databaseURL": "https://reside-fireadmin.firebaseio.com",
+          "projectId": "reside-fireadmin",
+          "storageBucket": "reside-fireadmin.appspot.com"
         },
         "reduxFirebase": {
           "userProfile": "users",
