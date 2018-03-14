@@ -52,58 +52,100 @@ If you are just getting started with Fireadmin, it is probably best to checkout 
 
 ## Running Your Own
 
+### Before Starting
+
+1. Make sure you have enabled billing on your Firebase account - external API communication requires setting up a payment method (you are only charged based on usage)
+1. Create an account on Algolia - Create a new app, you will need the API keys later
+1. Install Firebase Command Line Tools: `npm i -g firebase-tools`
+
+### Local Environment Setup
 1. Install dependencies: `yarn install` (can also be done with `npm install`)
 1. Create a file `src/config.js` to look like so (generated using [`firebase-ci`](https://www.npmjs.com/package/firebase-ci) in CI environments):
 
-  ```js
-  export const version = "0.1.9"; // matches package.json when using firebase-ci in CI environment
+    ```js
+    export const version = "0.*.*"; // matches package.json when using firebase-ci in CI environment
 
-  export const env = "local"; // matches branch/project when using firebase-ci in CI environment
+    export const env = "local"; // matches branch/project when using firebase-ci in CI environment
 
-  // Get from Auth Tab with Firebase's Console
-  // matches branch/project settings when using firebase-ci in CI environment
-  export const firebase = {
-    apiKey: "<- api key ->",
-    authDomain: "<- auth domain ->",
-    databaseURL: "<- database URL ->",
-    projectId: "<- project ID ->",
-    storageBucket: "<- storageBucket ->",
-    messagingSenderId: "<- message sender ID ->",
-  };
+    // Get from Auth Tab with Firebase's Console
+    // matches branch/project settings when using firebase-ci in CI environment
+    export const firebase = {
+      apiKey: "<- api key ->",
+      authDomain: "<- auth domain ->",
+      databaseURL: "<- database URL ->",
+      projectId: "<- project ID ->",
+      storageBucket: "<- storageBucket ->",
+      messagingSenderId: "<- message sender ID ->",
+    };
 
-  export const reduxFirebase = {
-    userProfile: "users",
-    enableLogging: false,
-    updateProfileOnLogin: true,
-    useFirestoreForProfile: true,
-  };
+    export const reduxFirebase = {
+      userProfile: "users",
+      enableLogging: false,
+      updateProfileOnLogin: true,
+      useFirestoreForProfile: true,
+    };
 
-  // Google Analytics Tracking ID (leave blank for no analytics)
-  export const analyticsTrackingId = "";
+    // Google Analytics Tracking ID (leave blank for no analytics)
+    export const analyticsTrackingId = "<- your analytics tracking id ->";
 
-  // Stackdriver client side error reporting
-  export const googleApis = {
-    apiKey: "",
-  };
+    // Stackdriver client side error reporting (leave blank for no client side error reporting)
+    export const googleApis = {
+      apiKey: "<- your API Key for Google APIs ->",
+    };
 
-  // Algolia project info (for searching of User's Public Info and Public Templates)
-  export const algolia = {
-    appId: "",
-    apiKey: "",
-  };
+    // Algolia project info (for searching of User's Public Info and Public Templates)
+    export const algolia = {
+      appId: "<- your algolia app id ->",
+      apiKey: "<- your algolia apiKey ->",
+    };
 
-  export default {
-    version,
-    env,
-    firebase,
-    reduxFirebase,
-    analyticsTrackingId,
-    googleApis,
-    algolia
-  }
-  ```
-1. Change settings in `.firebaserc` to match your own Firebase credentials
+    export default {
+      version,
+      env,
+      firebase,
+      reduxFirebase,
+      analyticsTrackingId,
+      googleApis,
+      algolia
+    }
+    ```
+1. Create a functions config file within the functions folder that looks like so:
+
+    ```json
+    {
+      "algolia": {
+        "api_key": "<- your API KEY ->",
+        "app_id": "<- your Algolia APP ID ->"
+      },
+      "gmail": {
+        "email": "<- gmail account for sending invite emails ->",
+        "password": "<- password for ^ email ->"
+      },
+      "encryption": {
+        "password": "<- your own made up encryption password for service accounts -> "
+      }
+    }
+
+    ```
+1. Set Functions config variables to match the file you just made (for the deployed version of your functions):
+
+    __Required Variables__
+    ```bash
+    firebase functions:config:set algolia.api_key="<- your algolia api key ->" algolia.api_key="<- your algolia api key ->"\
+    encryption.password="somePassword"
+    ```
+
+    __Optional__
+    ```bash
+    firebase functions:config:set gmail.email="<- inviter gmail account ->" gmail.password="<- password of inviter account ->"
+    ```
+1. Build Project: `npm run build`
+1. Deploy to Firebase: `firebase deploy`
 1. Start Development server: `yarn start`
+  **NOTE:** You can also use `firebase serve` to test how your application will work when deployed to Firebase, but make sure you run `npm run build` first.
+1. View the deployed version of the site by running `firebase open hosting:site`
+
+## NPM Scripts
 
 While developing, you will probably rely mostly on `npm start`; however, there are additional scripts at your disposal:
 
@@ -118,7 +160,6 @@ While developing, you will probably rely mostly on `npm start`; however, there a
 |`lint:fix`         |Lints the project and [fixes all correctable errors](http://eslint.org/docs/user-guide/command-line-interface.html#fix)|
 
 [Husky](https://github.com/typicode/husky) is used to enable `prepush` hook capability. The `prepush` script currently runs `eslint`, which will keep you from pushing if there is any lint within your code. If you would like to disable this, remove the `prepush` script from the `package.json`.
-
 
 ## Application Structure
 
@@ -152,24 +193,22 @@ While developing, you will probably rely mostly on `npm start`; however, there a
 │   │   ├── createStore.js   # Create and instrument redux store
 │   │   └── reducers.js      # Reducer registry and injection
 │   └── styles               # Application-wide styles (generally settings)
+├── project.config.js        # Project configuration settings (includes ci settings)
 └── tests                    # Unit tests
 ```
 
 ### Deployment
 
-1. Install Firebase Command Line Tool: `npm i -g firebase-tools`
-
 #### CI Deploy (recommended)
-**Note**: Config for this is located within `travis.yml`
-`firebase-ci` has been added to simplify the CI deployment process. All that is required is providing authentication with Firebase:
+**Note**: Config for this is located within `travis.yml`. `firebase-ci` has been added to simplify the CI deployment process by getting settings from the `.firebaserc`. All that is required is providing authentication with Firebase:
 
 1. Login: `firebase login:ci` to generate an authentication token (will be used to give Travis-CI rights to deploy on your behalf)
 1. Set `FIREBASE_TOKEN` environment variable within Travis-CI environment
-1. Run a build on Travis-CI
+1. Run a build on Travis-CI by pushing code to your Git remote (most likely Github)
 
 If you would like to deploy to different Firebase instances for different branches (i.e. `prod`), change `ci` settings within `.firebaserc`.
 
-For more options on CI settings checkout the [firebase-ci docs](https://github.com/prescottprue/firebase-ci)
+For more options on CI settings checkout the [firebase-ci docs](https://github.com/prescottprue/firebase-ci).
 
 #### Manual deploy
 
