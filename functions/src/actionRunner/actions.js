@@ -20,9 +20,9 @@ export async function copyBetweenFirestoreInstances(
   const destPath = inputValueOrTemplatePath(eventData, inputValues, 'dest')
   const srcPath = inputValueOrTemplatePath(eventData, inputValues, 'src')
   try {
-    const dataFromFirst = await firestore1.doc(srcPath).get()
+    const dataFromFirst = await firestore1.collection(srcPath).get()
     const updateRes = await firestore2
-      .doc(destPath)
+      .collection(destPath)
       .set(dataFromFirst, { merge })
     console.log('Copy between Firestore instances successful')
     return updateRes
