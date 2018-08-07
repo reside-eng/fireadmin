@@ -1,16 +1,15 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import Paper from 'material-ui/Paper'
-import { get, map, startCase } from 'lodash'
-import Table, {
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow
-} from 'material-ui/Table'
-import IconButton from 'material-ui/IconButton'
-import Tooltip from 'material-ui/Tooltip'
-import RedoIcon from 'material-ui-icons/Redo'
+import Paper from '@material-ui/core/Paper'
+import { get, map, startCase, invoke } from 'lodash'
+import Table from '@material-ui/core/Table'
+import TableBody from '@material-ui/core/TableBody'
+import TableCell from '@material-ui/core/TableCell'
+import TableHead from '@material-ui/core/TableHead'
+import TableRow from '@material-ui/core/TableRow'
+import IconButton from '@material-ui/core/IconButton'
+import Tooltip from '@material-ui/core/Tooltip'
+import RedoIcon from '@material-ui/icons/Redo'
 import { formatDateTime } from 'utils/formatters'
 import classes from './RecentActions.scss'
 
@@ -27,14 +26,16 @@ export const RecentActions = ({
           <TableCell>Created By</TableCell>
           <TableCell>Template</TableCell>
           <TableCell>Source/Dest</TableCell>
-          <TableCell>Path</TableCell>
+          <TableCell>Input 1 Value</TableCell>
           <TableCell>Redo</TableCell>
         </TableRow>
       </TableHead>
       <TableBody>
         {map(orderedActions, (action, groupName) => [
           <TableRow key={groupName} className={classes.tableRowDivider}>
-            <TableCell>{formatDateTime(action.createdAt)}</TableCell>
+            <TableCell>
+              {formatDateTime(invoke(action, 'createdAt.toDate'))}
+            </TableCell>
             <TableCell>
               <span>{action.createdBy || startCase(action.createdByType)}</span>
             </TableCell>
@@ -49,7 +50,13 @@ export const RecentActions = ({
               </span>
             </TableCell>
             <TableCell>
-              <span>{get(action, 'eventData.inputValues.2', 'No Path')}</span>
+              <span>
+                {get(
+                  action,
+                  'eventData.inputValues.2',
+                  get(action, 'eventData.inputValues.0', 'No Path')
+                )}
+              </span>
             </TableCell>
             <TableCell>
               <Tooltip

@@ -1,37 +1,40 @@
-import { get } from 'lodash'
+import { get, map, some } from 'lodash'
 import { compose } from 'redux'
 import { connect } from 'react-redux'
+import { withFirebase, withFirestore } from 'react-redux-firebase'
 import { formValueSelector } from 'redux-form'
-import { withStateHandlers, withHandlers, withProps } from 'recompose'
-import { firestoreConnect } from 'react-redux-firebase'
 import { formNames } from 'constants'
+import { withStateHandlers, withHandlers, withProps } from 'recompose'
 import { withNotifications } from 'modules/notification'
 import * as handlers from './ActionsPage.handlers'
 
-const actionRunnerFormSelector = formValueSelector(formNames.actionRunner)
+const selector = formValueSelector(formNames.actionRunner)
 
 export default compose(
   withNotifications,
-  // Create listeners for Firestore
-  firestoreConnect(({ params }) => [
-    // Project environments
-    {
-      collection: 'projects',
-      doc: params.projectId,
-      subcollections: [{ collection: 'environments' }]
-    },
-    // Project
-    {
-      collection: 'projects',
-      doc: params.projectId
-    }
-  ]),
+  withFirestore,
+  withFirebase,
   // Map redux state to props
-  connect((state, { params }) => ({
-    auth: state.firebase.auth,
-    inputValues: actionRunnerFormSelector(state, 'inputValues'),
-    project: get(state.firestore, `data.projects.${params.projectId}`)
-  })),
+  connect((state, { params }) => {
+    const {
+      firebase,
+      firestore: { data, ordered }
+    } = state
+    return {
+      uid: firebase.auth.uid,
+      project: get(data, `projects.${params.projectId}`),
+      environments: get(ordered, `environments-${params.projectId}`),
+      lockedEnvInUse: some(
+        map(selector(state, 'environmentValues'), envInd =>
+          get(
+            state.firestore.ordered,
+            `environments-${params.projectId}.${envInd}`
+          )
+        ),
+        { locked: true }
+      )
+    }
+  }),
   // State handlers as props
   withStateHandlers(
     () => ({
@@ -43,10 +46,10 @@ export default compose(
       toggleTemplateEdit: ({ templateEditExpanded }) => () => ({
         templateEditExpanded: !templateEditExpanded
       }),
-      closeTemplateEdit: ({ templateEditExpanded }) => () => ({
+      closeTemplateEdit: () => () => ({
         templateEditExpanded: false
       }),
-      selectActionTemplate: ({ selectInstance }) => newSelectedTemplate => ({
+      selectActionTemplate: () => newSelectedTemplate => ({
         selectedTemplate: newSelectedTemplate,
         templateEditExpanded: false
       }),
@@ -64,9 +67,10 @@ export default compose(
   ),
   // Handlers as props
   withHandlers(handlers),
-  withProps(({ selectedTemplate }) => ({
+  withProps(({ selectedTemplate, actionProcessing, lockedEnvInUse }) => ({
     templateName: selectedTemplate
       ? `Template: ${get(selectedTemplate, 'name', '')}`
-      : 'Template'
+      : 'Template',
+    runActionDisabled: !selectedTemplate || actionProcessing || lockedEnvInUse
   }))
 )

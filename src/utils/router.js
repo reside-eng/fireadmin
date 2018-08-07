@@ -1,9 +1,7 @@
 import { UserAuthWrapper } from 'redux-auth-wrapper'
 import { browserHistory } from 'react-router'
 import { LIST_PATH } from 'constants'
-import { env } from 'config'
 import LoadingSpinner from 'components/LoadingSpinner'
-import { trackRouteUpdate } from './analytics'
 
 const AUTHED_REDIRECT = 'AUTHED_REDIRECT'
 const UNAUTHED_REDIRECT = 'UNAUTHED_REDIRECT'
@@ -15,7 +13,6 @@ const UNAUTHED_REDIRECT = 'UNAUTHED_REDIRECT'
  * @return {Component} wrappedComponent
  */
 export const UserIsAuthenticated = UserAuthWrapper({
-  // eslint-disable-line new-cap
   wrapperDisplayName: 'UserIsAuthenticated',
   LoadingComponent: LoadingSpinner,
   authSelector: ({ firebase: { auth } }) => auth,
@@ -40,7 +37,6 @@ export const UserIsAuthenticated = UserAuthWrapper({
  * @return {Component} wrappedComponent
  */
 export const UserIsNotAuthenticated = UserAuthWrapper({
-  // eslint-disable-line new-cap
   wrapperDisplayName: 'UserIsNotAuthenticated',
   allowRedirectBack: false,
   LoadingComponent: LoadingSpinner,
@@ -50,10 +46,9 @@ export const UserIsNotAuthenticated = UserAuthWrapper({
   authSelector: ({ firebase: { auth } }) => auth,
   authenticatingSelector: ({ firebase: { auth, isInitializing } }) =>
     !auth.isLoaded || isInitializing,
-  // predicate: auth => auth === null,
   predicate: auth => auth.isEmpty,
   redirectAction: newLoc => dispatch => {
-    browserHistory.push(newLoc)
+    browserHistory.replace(newLoc)
     dispatch({ type: AUTHED_REDIRECT })
   }
 })
@@ -62,10 +57,33 @@ export const UserIsNotAuthenticated = UserAuthWrapper({
  * @description Fired when route is updated. Route updates are tracked if
  environment is production
  */
-export const handleRouteUpdate = () => {
-  if (env === 'prod') {
-    trackRouteUpdate()
+export const createOnEnter = store => (
+  { location: { query, pathname }, auth },
+  replace
+) => {
+  const currentItem = sessionStorage.getItem('fbToken')
+  if (currentItem) {
+    /* eslint-disable no-console */
+    console.log('fbToken found in session storage, logging in...')
+    return store.firebase
+      .login({ token: currentItem })
+      .then(() => {
+        console.log(
+          'auth through fbToken successful! Removing token from session storage'
+        )
+      })
+      .catch(err => {
+        console.log(
+          `Error logging in through auth token: ${err.message || ''}`,
+          err
+        )
+        /* eslint-enable no-console */
+        Raven.captureException('Error authenticating with Auth token', err)
+        return '/'
+      })
   }
+
+  return null
 }
 
 export default {

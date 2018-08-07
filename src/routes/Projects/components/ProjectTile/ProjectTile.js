@@ -1,40 +1,47 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import Paper from 'material-ui/Paper'
-import Tooltip from 'material-ui/Tooltip'
-import IconButton from 'material-ui/IconButton'
-// import Button from 'material-ui/Button'
-import DeleteIcon from 'material-ui-icons/Delete'
-import AddPersonIcon from 'material-ui-icons/GroupAdd'
-import PersonIcon from 'material-ui-icons/Person'
+import { invoke } from 'lodash'
+import Paper from '@material-ui/core/Paper'
+import IconButton from '@material-ui/core/IconButton'
+import Tooltip from '@material-ui/core/Tooltip'
+import ListItemIcon from '@material-ui/core/ListItemIcon'
+import ListItemText from '@material-ui/core/ListItemText'
+import Menu from '@material-ui/core/Menu'
+import MenuItem from '@material-ui/core/MenuItem'
+import DeleteIcon from '@material-ui/icons/Delete'
+import PeopleIcon from '@material-ui/icons/People'
+import MoreVertIcon from '@material-ui/icons/MoreVert'
+import EditIcon from '@material-ui/icons/ModeEdit'
+import { formatDate } from 'utils/formatters'
 import SharingDialog from '../SharingDialog'
-import { get, map } from 'lodash'
-import moment from 'moment'
-import Menu, { MenuItem } from 'material-ui/Menu'
-import MoreVertIcon from 'material-ui-icons/MoreVert'
-import { ListItemIcon, ListItemText } from 'material-ui/List'
-import EditIcon from 'material-ui-icons/ModeEdit'
-import classes from './ProjectTile.scss'
+import classesFromStyles from './ProjectTile.scss'
 
 export const ProjectTile = ({
   open,
   project,
+  numberOfCollaborators,
+  classes,
   onSelect,
   onDelete,
-  users,
   menuClick,
   closeMenu,
   anchorEl,
   sharingDialogOpen,
   toggleSharingDialog
 }) => (
-  <Paper className={classes.container} open={open}>
-    <div className={classes.top}>
-      <span className={classes.name} onClick={() => onSelect(project)}>
+  <Paper
+    className={classesFromStyles.container}
+    open={open}
+    data-test="project-tile">
+    <div className={classesFromStyles.top}>
+      <span
+        className={classesFromStyles.name}
+        onClick={() => onSelect(project)}
+        data-test="project-tile-name">
         {project.name}
       </span>
       <div>
-        <IconButton onClick={menuClick}>
+        <IconButton onClick={menuClick} data-test="project-tile-more">
           <MoreVertIcon />
         </IconButton>
         <Menu
@@ -42,14 +49,16 @@ export const ProjectTile = ({
           anchorEl={anchorEl}
           open={Boolean(anchorEl)}
           onClose={closeMenu}>
-          <MenuItem onClick={() => onSelect(project)}>
-            <ListItemIcon className={classes.icon}>
+          <MenuItem
+            onClick={() => onSelect(project)}
+            data-test="project-tile-edit">
+            <ListItemIcon className={classesFromStyles.icon}>
               <EditIcon />
             </ListItemIcon>
             <ListItemText inset primary="Edit" />
           </MenuItem>
-          <MenuItem onClick={onDelete}>
-            <ListItemIcon className={classes.icon}>
+          <MenuItem onClick={onDelete} data-test="project-tile-delete">
+            <ListItemIcon className={classesFromStyles.icon}>
               <DeleteIcon />
             </ListItemIcon>
             <ListItemText inset primary="Delete" />
@@ -58,29 +67,16 @@ export const ProjectTile = ({
       </div>
     </div>
     {project.createdAt ? (
-      <span className={classes.createdAt}>
-        {moment(project.createdAt).format('MM/DD/YY')}
+      <span className={classesFromStyles.createdAt}>
+        {formatDate(invoke(project.createdAt, 'toDate'))}
       </span>
     ) : null}
     <div className="flex-column">
-      <Tooltip title="Add Collaborators" placement="bottom">
+      <Tooltip title="Collaborators" placement="bottom">
         <IconButton onClick={toggleSharingDialog}>
-          <AddPersonIcon />
+          <PeopleIcon />
         </IconButton>
       </Tooltip>
-      {project.collaborators ? (
-        <div className="flex-row">
-          {map(project.collaborators, (collab, collabId) => (
-            <Tooltip
-              key={`collab-${collabId}`}
-              title={get(users, `${collabId}.displayName`, 'Collaborator')}>
-              <IconButton onClick={toggleSharingDialog}>
-                <PersonIcon />
-              </IconButton>
-            </Tooltip>
-          ))}
-        </div>
-      ) : null}
     </div>
     <SharingDialog
       open={sharingDialogOpen}
@@ -92,7 +88,7 @@ export const ProjectTile = ({
 
 ProjectTile.propTypes = {
   project: PropTypes.object.isRequired,
-  users: PropTypes.object,
+  numberOfCollaborators: PropTypes.number,
   onSelect: PropTypes.func.isRequired,
   menuClick: PropTypes.func.isRequired,
   closeMenu: PropTypes.func.isRequired,
@@ -100,6 +96,7 @@ ProjectTile.propTypes = {
   anchorEl: PropTypes.object,
   toggleSharingDialog: PropTypes.func,
   sharingDialogOpen: PropTypes.bool,
+  classes: PropTypes.object.isRequired,
   open: PropTypes.bool
 }
 

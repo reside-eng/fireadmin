@@ -1,10 +1,8 @@
 import { get, isFunction } from 'lodash'
-const functions = require('firebase-functions')
-const algoliasearch = require('algoliasearch')
+import algoliasearch from 'algoliasearch'
+import * as functions from 'firebase-functions'
 
-// Authenticate to Algolia Database.
-// TODO: Make sure you configure the `algolia.app_id` and `algolia.api_key`
-// Google Cloud environment variables.
+// Authenticate to Algolia Database
 const client = algoliasearch(
   functions.config().algolia.app_id,
   functions.config().algolia.api_key
@@ -25,11 +23,11 @@ export function createIndexFunc({
   indexCondition,
   otherPromises = []
 }) {
-  return event => {
+  return (change, context) => {
     const index = client.initIndex(indexName)
-    const objectID = get(event, `params.${idParam}`)
+    const objectID = get(context, `params.${idParam}`)
     // Remove the item from algolia if it is being deleted
-    if (!event.data.exists) {
+    if (!change.after.exists) {
       console.log(
         `Object with ID: ${objectID} being deleted, deleting from Algolia index: ${indexName} ... `
       )
@@ -40,11 +38,11 @@ export function createIndexFunc({
         return null
       })
     }
-    const data = event.data.data()
+    const data = change.after.data()
     // Check if index indexCondition is a function
     if (isFunction(indexCondition)) {
       // Only re-index if indexCondition function returns truthy
-      if (!indexCondition(data, event.data)) {
+      if (!indexCondition(data, change)) {
         console.log('Item index indexCondition provided and not met. Exiting.')
         return null
       }

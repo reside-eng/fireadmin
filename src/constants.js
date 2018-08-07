@@ -12,6 +12,7 @@ export const LOGIN_FORM_NAME = 'login'
 export const SIGNUP_FORM_NAME = 'signup'
 export const NEW_PROJECT_FORM_NAME = 'newProject'
 export const PROJECT_BUCKET_CONFIG_PATH = 'bucketConfig'
+export const PERMISSIONS_PATH = 'permissions'
 
 export const formNames = {
   account: ACCOUNT_FORM_NAME,
@@ -20,7 +21,10 @@ export const formNames = {
   newEnvironment: 'newEnvironment',
   newActionTemplate: 'newActionTemplate',
   actionTemplate: 'actionTemplate',
-  actionRunner: 'actionRunner'
+  actionRunner: 'actionRunner',
+  projectPermissions: 'projectPermissions',
+  projectRoles: 'projectRoles',
+  newRole: 'newRole'
 }
 
 export const paths = {
@@ -32,7 +36,8 @@ export const paths = {
   projectActions: PROJECT_ACTION_PATH,
   projectEnvironments: PROJECT_ENVIRONMENTS_PATH,
   projectEvents: PROJECT_EVENTS_PATH,
-  projectBucketConfig: PROJECT_BUCKET_CONFIG_PATH
+  projectBucketConfig: PROJECT_BUCKET_CONFIG_PATH,
+  projectPermissions: PERMISSIONS_PATH
 }
 
 export const firebasePaths = {
@@ -40,6 +45,49 @@ export const firebasePaths = {
   actionTemplates: 'actionTemplates',
   actionRunnerRequests: 'requests/actionRunner',
   actionRunnerResponses: 'responses/actionRunner'
+}
+
+export const defaultRoles = {
+  owner: {
+    name: 'Owner',
+    permissions: {
+      read: {
+        environments: true,
+        members: true,
+        permissions: true,
+        roles: true
+      },
+      update: {
+        environments: true,
+        members: true,
+        permissions: true,
+        roles: true
+      },
+      delete: {
+        environments: true,
+        members: true,
+        permissions: true,
+        roles: true
+      },
+      create: {
+        environments: true,
+        members: true,
+        permissions: true,
+        roles: true
+      }
+    }
+  },
+  editor: {
+    name: 'Editor',
+    permissions: {
+      read: { environments: true },
+      update: { environments: true },
+      create: { environments: true }
+    }
+  },
+  viewer: {
+    permissions: { read: { environments: true } }
+  }
 }
 
 export default { ...paths, ...formNames }

@@ -1,6 +1,6 @@
 import { get, map } from 'lodash'
 import { compose, withHandlers, withProps } from 'recompose'
-import { firestoreConnect, firebaseConnect } from 'react-redux-firebase'
+import { firestoreConnect } from 'react-redux-firebase'
 import { connect } from 'react-redux'
 import { initialize } from 'redux-form'
 import { spinnerWhileLoading, renderWhileEmpty } from 'utils/components'
@@ -9,10 +9,9 @@ import { databaseURLToProjectName } from 'utils'
 import { formNames } from 'constants'
 
 export default compose(
-  firebaseConnect(['displayNames']),
   // Map redux state to props
   firestoreConnect(({ params, auth }) => [
-    // Project environments
+    // Recent actions
     {
       collection: 'projects',
       doc: params.projectId,
@@ -20,13 +19,13 @@ export default compose(
       where: ['eventType', '==', 'requestActionRun'],
       orderBy: ['createdAt', 'desc'],
       limit: 3,
-      storeAs: 'recentActions'
+      storeAs: `recentActions-${params.projectId}`
     }
   ]),
   // Map redux state to props
-  connect((state, { params }) => ({
-    displayNames: get(state.firebase, 'data.displayNames'),
-    recentActions: get(state.firestore, `ordered.recentActions`)
+  connect(({ firebase, firestore }, { params: { projectId } }) => ({
+    displayNames: get(firebase, 'data.displayNames'),
+    recentActions: get(firestore, `ordered.recentActions-${projectId}`)
   })),
   renderWhileEmpty(['recentActions'], NoRecentActions),
   spinnerWhileLoading(['recentActions']),
@@ -43,10 +42,18 @@ export default compose(
     }),
     actionToEnvironments: action => ({
       src: databaseURLToProjectName(
-        get(action, 'eventData.inputValues.0.databaseURL', '')
+        get(
+          action,
+          'eventData.environments.0.databaseURL',
+          get(action, 'eventData.inputValues.0.databaseURL', '')
+        )
       ),
       dest: databaseURLToProjectName(
-        get(action, 'eventData.inputValues.1.databaseURL', '')
+        get(
+          action,
+          'eventData.environments.1.databaseURL',
+          get(action, 'eventData.inputValues.1.databaseURL', '')
+        )
       )
     })
   })),

@@ -1,10 +1,11 @@
 import { compose } from 'redux'
 import { connect } from 'react-redux'
-import { get, map, groupBy } from 'lodash'
+import { get, invoke, map, groupBy } from 'lodash'
 import { withProps } from 'recompose'
 import { firestoreConnect, firebaseConnect } from 'react-redux-firebase'
 import { formatDate } from 'utils/formatters'
-import { spinnerWhileLoading } from 'utils/components'
+import { spinnerWhileLoading, renderWhileEmpty } from 'utils/components'
+import NoProjectEvents from './NoProjectEvents'
 
 export default compose(
   firebaseConnect(['displayNames']),
@@ -14,16 +15,18 @@ export default compose(
       doc: get(params, 'projectId'),
       subcollections: [{ collection: 'events' }],
       orderBy: ['createdAt', 'desc'],
-      limit: 300
+      storeAs: `projectEvents-${params.projectId}`,
+      limit: 100
     }
   ]),
-  connect(({ firebase, firestore: { data } }, { params }) => ({
-    project: get(data, `projects.${params.projectId}`),
+  connect(({ firebase, firestore }, { params }) => ({
+    projectEvents: get(firestore, `data.projectEvents-${params.projectId}`),
     displayNames: get(firebase, 'data.displayNames')
   })),
-  spinnerWhileLoading(['project', 'project.events']),
-  withProps(({ project, displayNames }) => {
-    const events = map(get(project, 'events'), event => {
+  spinnerWhileLoading(['projectEvents']),
+  renderWhileEmpty(['projectEvents'], NoProjectEvents),
+  withProps(({ projectEvents, displayNames }) => {
+    const events = map(projectEvents, event => {
       const createdBy = get(event, 'createdBy')
       if (createdBy) {
         return {
@@ -35,7 +38,9 @@ export default compose(
     })
     if (events) {
       return {
-        groupedEvents: groupBy(events, event => formatDate(event.createdAt))
+        groupedEvents: groupBy(events, event =>
+          formatDate(invoke(get(event, 'createdAt'), 'toDate'))
+        )
       }
     }
   })

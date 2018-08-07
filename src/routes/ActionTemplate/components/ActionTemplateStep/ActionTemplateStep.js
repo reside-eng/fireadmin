@@ -2,22 +2,22 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { capitalize, get } from 'lodash'
 import { Field } from 'redux-form'
-import { TextField, Select } from 'redux-form-material-ui'
-import { FormControl } from 'material-ui/Form'
-import { InputLabel } from 'material-ui/Input'
-import ExpansionPanel, {
-  ExpansionPanelSummary,
-  ExpansionPanelDetails
-} from 'material-ui/ExpansionPanel'
-import { ListItemText } from 'material-ui/List'
-import Typography from 'material-ui/Typography'
-import { MenuItem } from 'material-ui/Menu'
-import IconButton from 'material-ui/IconButton'
-import Button from 'material-ui/Button'
-import Tooltip from 'material-ui/Tooltip'
-import Grid from 'material-ui/Grid'
-import ExpandMoreIcon from 'material-ui-icons/ExpandMore'
-import DeleteIcon from 'material-ui-icons/Delete'
+import FormControlLabel from '@material-ui/core/FormControlLabel'
+import { TextField, Select, Checkbox } from 'redux-form-material-ui'
+import FormControl from '@material-ui/core/FormControl'
+import InputLabel from '@material-ui/core/InputLabel'
+import ExpansionPanel from '@material-ui/core/ExpansionPanel'
+import ExpansionPanelSummary from '@material-ui/core/ExpansionPanelSummary'
+import ExpansionPanelDetails from '@material-ui/core/ExpansionPanelDetails'
+import ListItemText from '@material-ui/core/ListItemText'
+import Typography from '@material-ui/core/Typography'
+import MenuItem from '@material-ui/core/MenuItem'
+import IconButton from '@material-ui/core/IconButton'
+import Button from '@material-ui/core/Button'
+import Tooltip from '@material-ui/core/Tooltip'
+import Grid from '@material-ui/core/Grid'
+import ExpandMoreIcon from '@material-ui/icons/ExpandMore'
+import DeleteIcon from '@material-ui/icons/Delete'
 import ActionEditor from '../ActionEditor'
 import ActionStepLocation from '../ActionStepLocation'
 import classes from './ActionTemplateStep.scss'
@@ -38,7 +38,7 @@ export const ActionTemplateStep = ({
   <div>
     <Button
       onClick={() =>
-        fields.push({ type: 'copy', src: { pathType: 'userInpu' } })
+        fields.push({ type: 'copy', src: { pathType: 'userInput' } })
       }
       color="primary"
       variant="raised"
@@ -101,6 +101,29 @@ export const ActionTemplateStep = ({
                   ))}
                 </Field>
               </FormControl>
+              {get(steps, `${index}.type`) === 'copy' ? (
+                <div className="flex-column">
+                  <FormControlLabel
+                    control={
+                      <Field
+                        name="subcollections"
+                        disabled={
+                          get(steps, `${index}.src.resource`) !== 'firestore'
+                        }
+                        component={Checkbox}
+                      />
+                    }
+                    label="Include subcollections (only Firestore)"
+                    className={classes.subcollectionOption}
+                  />
+                  <Typography style={{ marginTop: '1rem' }}>
+                    <strong>Note:</strong>
+                    <br />
+                    All collections will by copied by default. Specific
+                    subcollection support coming soon.
+                  </Typography>
+                </div>
+              ) : null}
             </Grid>
             {get(steps, `${index}.type`) !== 'custom' ? (
               <Grid

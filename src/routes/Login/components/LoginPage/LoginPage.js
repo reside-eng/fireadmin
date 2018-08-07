@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 // import { Link } from 'react-router'
 import GoogleButton from 'react-google-button'
-import Paper from 'material-ui/Paper'
+import Paper from '@material-ui/core/Paper'
 
 import classes from './LoginPage.scss'
 
@@ -13,7 +13,7 @@ export const LoginPage = ({ emailLogin, googleLogin, onSubmitFail }) => (
         Click below to login using your Google Account
       </div>
       <div className={classes.providers}>
-        <GoogleButton onClick={googleLogin} />
+        <GoogleButton data-test="google-auth-button" onClick={googleLogin} />
       </div>
     </Paper>
   </div>

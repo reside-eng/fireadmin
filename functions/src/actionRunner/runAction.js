@@ -1,4 +1,4 @@
-import { invoke, get } from 'lodash'
+import { get } from 'lodash'
 import { runStepsFromEvent, runBackupsFromEvent } from './runSteps'
 import { to } from '../utils/async'
 import {
@@ -8,24 +8,25 @@ import {
 } from './utils'
 
 /**
- * @name actionRunner
  * Run action based on action template. Multiple Service Account Types
  * supported (i.e. stored on Firestore or cloud storage)
  */
-export default async function runAction(event) {
-  const eventData = invoke(event.data, 'val') || {}
+export default async function runAction(snap, context) {
+  const eventData = snap.val() || {}
   console.log('Action run request recieved. Sending start event...')
 
   // Running an action not supported without projectId
   if (!eventData.projectId) {
-    throw new Error('projectId parameter is required')
+    const missingProjectErr = new Error('projectId parameter is required')
+    await updateResponseOnRTDB(snap, context, missingProjectErr)
+    throw missingProjectErr
   }
 
   // Send start event
   const startEvent = { eventType: 'startActionRun', eventData }
   await Promise.all([
     // Mark original request object as started
-    updateRequestAsStarted(event),
+    updateRequestAsStarted(snap, context),
     // Write an event to project's events subcollection
     writeProjectEvent(eventData.projectId, startEvent)
   ])
@@ -34,7 +35,7 @@ export default async function runAction(event) {
   // Handle backups if they exist within the template
   if (get(eventData, 'template.backups')) {
     console.log('Backups exist within template, running backups...')
-    const [backupsErr] = await to(runBackupsFromEvent(event))
+    const [backupsErr] = await to(runBackupsFromEvent(snap, context))
 
     // Handle errors within backups
     if (backupsErr) {
@@ -48,7 +49,7 @@ export default async function runAction(event) {
       }
       await Promise.all([
         // Mark original request object with error
-        updateResponseOnRTDB(event, backupsErr),
+        updateResponseOnRTDB(snap, context, backupsErr),
         // Write an error event to project's events subcollection
         writeProjectEvent(eventData.projectId, errorEvent)
       ])
@@ -62,7 +63,7 @@ export default async function runAction(event) {
   console.log('Starting steps run...')
 
   // Run steps
-  const [err, result] = await to(runStepsFromEvent(event))
+  const [err, result] = await to(runStepsFromEvent(snap, context))
 
   // Handle errors within steps
   if (err) {
@@ -75,7 +76,7 @@ export default async function runAction(event) {
     }
     await Promise.all([
       // Mark original request object with error
-      updateResponseOnRTDB(event, err),
+      updateResponseOnRTDB(snap, context, err),
       // Write an error event to project's events subcollection
       writeProjectEvent(eventData.projectId, errorEvent)
     ])

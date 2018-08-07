@@ -1,11 +1,10 @@
+import { size } from 'lodash'
 import { compose } from 'redux'
-import { connect } from 'react-redux'
-import { withStateHandlers } from 'recompose'
+import { withStateHandlers, withProps } from 'recompose'
+import { withStyles } from '@material-ui/core/styles'
+import styles from './ProjectTile.styles'
 
 export default compose(
-  connect(({ firestore: { data: { users } } }, { params }) => ({
-    users
-  })),
   withStateHandlers(
     ({ initialDialogOpen = false, initialAnchorEl = null }) => ({
       sharingDialogOpen: initialDialogOpen,
@@ -26,5 +25,9 @@ export default compose(
         anchorEl: e.target
       })
     }
-  )
+  ),
+  withProps(({ project }) => ({
+    numberOfCollaborators: size(project.collaborators)
+  })),
+  withStyles(styles)
 )

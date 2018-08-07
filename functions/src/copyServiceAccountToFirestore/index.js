@@ -1,7 +1,10 @@
 import * as functions from 'firebase-functions'
 import { encrypt } from '../utils/encryption'
 import { to } from '../utils/async'
-import { downloadFromStorage } from '../utils/cloudStorage'
+import {
+  downloadFromStorage,
+  slashPathToStorageRef
+} from '../utils/cloudStorage'
 
 /**
  * @name copyServiceAccountToFirestore
@@ -24,16 +27,16 @@ export default functions.firestore
  * service account to a project
  * @return {Promise} Resolves with filePath
  */
-async function handleServiceAccountCreate(event) {
-  // const { fullPath } = event.data.data() // for serviceAccounts as subcollection
-  const eventData = event.data.data()
+export async function handleServiceAccountCreate(snap) {
+  const eventData = snap.data()
   if (!eventData.serviceAccount) {
     throw new Error(
       'serviceAccount parameter is required to copy service account to Firestore'
     )
   }
-  const { serviceAccount: { fullPath } } = eventData
-  // const fileName = path.basename(tempLocalPath) // File Name
+  const {
+    serviceAccount: { fullPath }
+  } = eventData
   // Download service account from Cloud Storage
   const [downloadErr, fileData] = await to(downloadFromStorage(null, fullPath))
 
@@ -48,7 +51,7 @@ async function handleServiceAccountCreate(event) {
 
   // Write encrypted service account data to serviceAccount parameter of environment document
   const [updateErr] = await to(
-    event.data.ref.update('serviceAccount', {
+    snap.ref.update('serviceAccount', {
       ...eventData.serviceAccount,
       credential: encrypt(fileData)
     })
@@ -63,9 +66,21 @@ async function handleServiceAccountCreate(event) {
     throw updateErr
   }
 
-  console.log(
-    'Service account copied to Firestore, cleaning up...',
-    event.params
-  )
-  return fileData
+  console.log('Service account copied to Firestore, cleaning up...')
+
+  // Remove service account file from cloud storage
+  const fileRef = slashPathToStorageRef(fullPath)
+  const [deleteErr] = await to(fileRef.delete())
+
+  // Handle errors deleteting service account (still exists successfully)
+  if (deleteErr) {
+    console.error(
+      `Error removing service account from Cloud Storage: ${deleteErr.message}`,
+      deleteErr
+    )
+  }
+
+  console.log('Cleaning up successful, exiting.')
+
+  return null
 }

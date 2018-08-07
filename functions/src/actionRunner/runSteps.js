@@ -1,5 +1,5 @@
 import * as admin from 'firebase-admin'
-import { invoke, get, isArray, size, map, isObject } from 'lodash'
+import { get, isArray, size, map, isObject } from 'lodash'
 import { CUSTOM_STEPS_PATH } from './constants'
 import { invokeFirepadContent } from './firepad'
 import {
@@ -25,37 +25,57 @@ import {
 
 /**
  * Data action using Service account stored on Firestore
- * @param  {functions.Event} event - Event from cloud function
- * @param  {object|undefined} event.params - Parameters from event
- * @param  {String} event.data.serviceAccountType - Type of service accounts,
- * options include 'firestore', 'storage', or 'rtdb'
+ * @param  {functions.Event} snap - Event from cloud function
+ * @param  {Object} context
+ * @param  {Object} context.params - Parameters from event
  * @return {Promise}
  */
-export async function runStepsFromEvent(event) {
-  const eventData = invoke(event, 'data.val')
+export async function runStepsFromEvent(snap, context) {
+  const eventData = snap.val()
   if (!eventData) {
     throw new Error('Event object does not contain a value.')
   }
+
   if (!isObject(eventData.template)) {
     throw new Error('Action template is required to run steps')
   }
-  const { inputValues, template: { steps, inputs } } = eventData
+
+  const {
+    inputValues,
+    environments,
+    template: { steps, inputs }
+  } = eventData
+
   if (!isArray(steps)) {
-    await updateResponseWithError(event)
+    await updateResponseWithError(snap, context)
     throw new Error('Steps array was not provided to action request')
   }
+
   if (!isArray(inputs)) {
-    await updateResponseWithError(event)
+    await updateResponseWithError(snap, context)
     throw new Error('Inputs array was not provided to action request')
   }
+
   if (!isArray(inputValues)) {
-    await updateResponseWithError(event)
+    await updateResponseWithError(snap, context)
     throw new Error('Input values array was not provided to action request')
   }
+
+  const [convertEnvsErr, convertedEnvs] = await to(
+    validateAndConvertEnvironments(eventData, environments)
+  )
+
+  if (convertEnvsErr) {
+    console.error('Error converting envs:', convertEnvsErr.message)
+    throw convertEnvsErr
+  }
+
   console.log('Converting inputs of step....')
+
   const [convertInputsErr, convertedInputValues] = await to(
     validateAndConvertInputs(eventData, inputs)
   )
+
   if (convertInputsErr) {
     console.error('Error converting inputs:', convertInputsErr.message)
     throw convertInputsErr
@@ -70,7 +90,9 @@ export async function runStepsFromEvent(event) {
         createStepRunner({
           inputs,
           convertedInputValues,
-          event,
+          convertedEnvs,
+          snap,
+          context,
           eventData,
           totalNumSteps
         })
@@ -80,41 +102,42 @@ export async function runStepsFromEvent(event) {
   // Cleanup temp directory
   cleanupServiceAccounts()
   if (actionErr) {
-    await updateResponseWithError(event)
+    await updateResponseWithError(snap, context)
     throw actionErr
   }
   // Write response to RTDB
-  await updateResponseOnRTDB(event)
+  await updateResponseOnRTDB(snap, context)
   return actionResponse
 }
 
 /**
  * Data action using Service account stored on Firestore
- * @param  {functions.Event} event - Event from cloud function
- * @param  {object|undefined} event.params - Parameters from event
- * @param  {String} event.data.serviceAccountType - Type of service accounts,
- * options include 'firestore', 'storage', or 'rtdb'
+ * @param  {firebase.Datatabase.Snapshot} snap - Snapshot from cloud function
+ * @param  {Object} context - Context from cloud function
  * @return {Promise}
  */
-export async function runBackupsFromEvent(event) {
-  const eventData = invoke(event, 'data.val')
+export async function runBackupsFromEvent(snap, context) {
+  const eventData = snap.val()
   if (!eventData) {
     throw new Error('Event object does not contain a value.')
   }
   if (!isObject(eventData.template)) {
     throw new Error('Action template is required to run steps')
   }
-  const { inputValues, template: { backups, inputs } } = eventData
+  const {
+    inputValues,
+    template: { backups, inputs }
+  } = eventData
   if (!isArray(backups)) {
-    await updateResponseWithError(event)
+    await updateResponseWithError(snap, context)
     throw new Error('Steps array was not provided to action request')
   }
   if (!isArray(inputs)) {
-    await updateResponseWithError(event)
+    await updateResponseWithError(snap, context)
     throw new Error('Inputs array was not provided to action request')
   }
   if (!isArray(inputValues)) {
-    await updateResponseWithError(event)
+    await updateResponseWithError(snap, context)
     throw new Error('Input values array was not provided to action request')
   }
   console.log('Converting inputs of action....')
@@ -145,12 +168,53 @@ export async function runBackupsFromEvent(event) {
   // Cleanup temp directory
   cleanupServiceAccounts()
   if (actionErr) {
-    await updateResponseWithError(event)
+    await updateResponseWithError(snap, context)
     throw actionErr
   }
   // Write response to RTDB
-  await updateResponseOnRTDB(event)
+  await updateResponseOnRTDB(snap, context)
   return actionResponse
+}
+
+/**
+ * Validate and convert list of inputs to relevant types (i.e. serviceAccount
+ * data replaced with app)
+ * @param  {Array} inputs - List of inputs to convert
+ * @return {Promise} Resolves with an array of results of converting inputs
+ */
+function validateAndConvertEnvironments(eventData, envsMetas, event) {
+  if (!eventData.environments) {
+    return []
+  }
+  return Promise.all(
+    eventData.environments.map((envValue, envIdx) =>
+      validateAndConvertEnvironment(eventData, get(envsMetas, envIdx), envValue)
+    )
+  )
+}
+
+/**
+ * Validate and convert a single input to relevant type
+ * (i.e. serviceAccount data replaced with app)
+ * @param  {Object} original - Original input value
+ * @return {Promise} Resolves with firebase app if service account type,
+ * otherwise an dobject
+ */
+async function validateAndConvertEnvironment(eventData, inputMeta, inputValue) {
+  // Throw if input is required and is missing serviceAccountPath or databaseURL
+  const varsNeededForStorageType = ['fullPath', 'databaseURL']
+  const varsNeededForFirstoreType = ['credential', 'databaseURL']
+  if (
+    get(inputMeta, 'required') &&
+    !hasAll(inputValue, varsNeededForStorageType) &&
+    !hasAll(inputValue, varsNeededForFirstoreType)
+  ) {
+    throw new Error(
+      'Service Account input is required and does not contain required parameters'
+    )
+  }
+
+  return getAppFromServiceAccount(inputValue, eventData)
 }
 
 /**
@@ -229,7 +293,9 @@ async function validateAndConvertInputValues(eventData, inputMeta, inputValue) {
 function createStepRunner({
   inputs,
   convertedInputValues,
-  event,
+  convertedEnvs,
+  snap,
+  context,
   eventData,
   totalNumSteps
 }) {
@@ -251,16 +317,23 @@ function createStepRunner({
           step,
           inputs,
           convertedInputValues,
+          convertedEnvs,
           stepIdx,
           eventData,
           previousStepResult
         })
       )
       if (err) {
-        await updateResponseWithActionError(event, { totalNumSteps, stepIdx })
+        await updateResponseWithActionError(snap, context, {
+          totalNumSteps,
+          stepIdx
+        })
         throw new Error(`Error running step: ${stepIdx} : ${err.message}`)
       }
-      await updateResponseWithProgress(event, { totalNumSteps, stepIdx })
+      await updateResponseWithProgress(snap, context, {
+        totalNumSteps,
+        stepIdx
+      })
       return stepResponse
     }
   }
@@ -280,6 +353,7 @@ function createStepRunner({
 export async function runStep({
   inputs,
   convertedInputValues,
+  convertedEnvs,
   step,
   stepIdx,
   eventData,
@@ -289,7 +363,11 @@ export async function runStep({
   if (!step || !step.type) {
     throw new Error('Step object is invalid (i.e. does not contain a type)')
   }
-  const { type } = step
+
+  if (!convertedEnvs) {
+    throw new Error('Environments are required to run step')
+  }
+  const { type, src, dest } = step
 
   // Run custom action type (i.e. Code written within Firepad)
   if (type === 'custom') {
@@ -306,14 +384,9 @@ export async function runStep({
     return res
   }
 
-  // TODO: Enable dynamic src/dest by getting data from convertedInputValues
-  // Source/Dest info loaded from step
-  const src = get(step, 'src')
-  const dest = get(step, 'dest')
-
   // Service accounts come from converted version of what is selected for inputs
-  const app1 = get(convertedInputValues, '0')
-  const app2 = get(convertedInputValues, '1')
+  const app1 = get(convertedEnvs, '0')
+  const app2 = get(convertedEnvs, '1')
 
   // Require src and dest for all other step types
   if (!src || !dest || !src.resource || !dest.resource) {

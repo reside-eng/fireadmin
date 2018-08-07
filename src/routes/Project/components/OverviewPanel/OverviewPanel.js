@@ -1,9 +1,9 @@
 import React from 'react'
 import { Link } from 'react-router'
 import PropTypes from 'prop-types'
-import Paper from 'material-ui/Paper'
-import Button from 'material-ui/Button'
-import Typography from 'material-ui/Typography'
+import Paper from '@material-ui/core/Paper'
+import Button from '@material-ui/core/Button'
+import Typography from '@material-ui/core/Typography'
 import { paths } from 'constants'
 import classes from './OverviewPanel.scss'
 
@@ -53,7 +53,7 @@ export const OverviewPanel = ({
           <p className={classes.description}>
             Moving data is a nessesary part of any real world application.
             Actions allow you to move data in a repeatable way with complete
-            logs of everything along the way
+            logging of everything.
           </p>
         </div>
         <Link to={`${projectPath}/${paths.projectActions}`}>

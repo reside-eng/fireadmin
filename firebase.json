@@ -10,13 +10,20 @@
     "ignore": [
       "firebase.json",
       "**/.*",
-      "**/node_modules/**"
+      "**/node_modules/**",
+      "build",
+      "cypress"
     ],
     "rewrites": [
       {
         "source": "**",
         "destination": "/index.html"
       }
+    ]
+  },
+  "functions": {
+    "predeploy": [
+      "npm --prefix \"$RESOURCE_DIR\" run build"
     ]
   },
   "firestore": {

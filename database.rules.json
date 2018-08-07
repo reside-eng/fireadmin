@@ -1,20 +1,62 @@
 {
   "rules": {
-    ".read": "auth !== null",
-    ".write": "auth !== null",
+    ".read": false,
+    ".write": false,
+    "versionInfo": {
+      ".read": true,
+      ".write": false
+    },
     "displayNames": {
       ".read": true,
       ".write": false
     },
-    "serviceAccounts": {
-      "$serviceAccountId": {
-        ".read": "auth !== null",
-        ".write": "auth !== null"
+    "sessions": {
+      "$sessionId": {
+        ".validate": "newData.hasChildren(['user', 'startedAt']) || newData.hasChildren(['endedAt'])",
+        ".write": "auth !== null && ((!data.exists() && newData.child('user').val() === auth.uid) || (data.child('user').val() === auth.uid))",
+        "user": {
+          ".validate": "newData.isString()"
+        },
+        "startedAt": {
+          ".validate": "newData.isNumber()"
+        },
+        "endedAt": {
+          ".write": "!data.exists()"
+        }
       }
     },
-    "users": {
-      "$uid": {
-        ".write": "auth !== null && $uid === auth.uid"
+    "presence": {
+      "$userId": {
+        ".validate": "newData.isBoolean()",
+        ".write": "$userId === auth.uid || (!newData.exists() && data.exists())"
+      }
+    },
+    "requests": {
+      "$requestGroup": {
+        "$requestId": {
+          ".read": "auth !== null && data.child('createdBy').val() === auth.uid",
+          ".write": "auth !== null && newData.child('createdBy').val() === auth.uid"
+        }
+      }
+    },
+    "responses": {
+      "createAuthToken": {
+        "$responseId": {
+          ".read": "auth !== null && (root.child('requests').child('createAuthToken').child($responseId).child('createdBy').val() == auth.uid || root.child('requests').child('createAuthToken').child($responseId).child('uid').val() == auth.uid)",
+          ".write": "auth !== null && (root.child('requests').child('createAuthToken').child($responseId).child('createdBy').val() == auth.uid || root.child('requests').child('createAuthToken').child($responseId).child('uid').val() == auth.uid)"
+        }
+      },
+      "$responseGroup": {
+        "$responseId": {
+          ".read": "auth !== null && root.child('requests').child($responseGroup).child($responseId).child('createdBy').val() == auth.uid",
+          ".write": "auth !== null && root.child('requests').child($responseGroup).child($responseId).child('createdBy').val() == auth.uid"
+        }
+      }
+    },
+    "serviceAccounts": {
+      "$projectId": {
+        ".read": "auth !== null",
+        ".write": "auth !== null"
       }
     }
   }

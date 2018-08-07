@@ -22,12 +22,17 @@
           "userProfile": "users",
           "enableLogging": false,
           "updateProfileOnLogin": false,
-          "useFirestoreForProfile": true
+          "useFirestoreForProfile": true,
+          "useFirestoreForStorageMeta": true,
+          "presence": "presence",
+          "sessions": null
         },
         "analyticsTrackingId": "${GA_TRACKING_ID}",
         "googleApis": {
           "apiKey": "${PROD_GOOGLE_API_KEY}"
         },
+        "segmentId": "${STAGE_SEGMENT_ID}",
+        "sentryDsn": "${SENTRY_DSN}",
         "algolia": {
           "appId": "${PROD_ALGOLIA_APP_ID}",
           "apiKey": "${PROD_ALGOLIA_BROWSER_KEY}"
@@ -47,9 +52,14 @@
           "userProfile": "users",
           "enableLogging": false,
           "updateProfileOnLogin": false,
-          "useFirestoreForProfile": true
+          "useFirestoreForProfile": true,
+          "useFirestoreForStorageMeta": true,
+          "presence": "presence",
+          "sessions": null
         },
         "analyticsTrackingId": "${GA_TRACKING_ID}",
+        "segmentId": "${PROD_SEGMENT_ID}",
+        "sentryDsn": "${SENTRY_DSN}",
         "googleApis": {
           "apiKey": "${PROD_GOOGLE_API_KEY}"
         },
