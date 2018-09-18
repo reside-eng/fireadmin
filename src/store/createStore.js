@@ -8,11 +8,19 @@ import 'firebase/auth'
 import 'firebase/firestore'
 import 'firebase/database'
 import 'firebase/storage'
-import { setAnalyticsUser } from '../utils/analytics'
+import { persistStore, persistReducer } from 'redux-persist'
+import logger from 'redux-logger'
 import makeRootReducer from './reducers'
-import { firebase as fbConfig, reduxFirebase as rrfConfig } from '../config'
-import { version } from '../../package.json'
 import { updateLocation } from './location'
+import { setAnalyticsUser } from '../utils/analytics'
+import { initializeMessaging } from '../utils/messaging'
+import storage from 'redux-persist/lib/storage' // defaults to localStorage for web and AsyncStorage for react-native
+import {
+  firebase as fbConfig,
+  reduxFirebase as rrfConfig,
+  env
+} from '../config'
+import { version } from '../../package.json'
 
 export default (initialState = {}) => {
   // ======================================================
@@ -28,11 +36,16 @@ export default (initialState = {}) => {
     // This is where you add other middleware like redux-observable
   ]
 
+  if (env === 'local') {
+    // Add redux-logger to log action dispatches
+    middleware.push(logger)
+  }
+
   // ======================================================
   // Store Enhancers
   // ======================================================
   const enhancers = []
-  if (__DEV__) {
+  if (env === 'local') {
     const devToolsExtension = window.devToolsExtension
     if (typeof devToolsExtension === 'function') {
       enhancers.push(devToolsExtension())
@@ -46,9 +59,11 @@ export default (initialState = {}) => {
     useFirestoreForStorageMeta: true,
     presence: 'presence',
     sessions: null,
-    onAuthStateChanged: authState => {
+    onAuthStateChanged: (authState, firebase, dispatch) => {
       if (authState) {
         setAnalyticsUser(authState)
+        // Initalize messaging with dispatch
+        initializeMessaging(dispatch)
       }
     }
   }
@@ -68,13 +83,18 @@ export default (initialState = {}) => {
   // ======================================================
   // Store Instantiation and HMR Setup
   // ======================================================
+  const persistConfig = {
+    key: 'root',
+    storage
+  }
+  const persistedReducer = persistReducer(persistConfig, makeRootReducer())
   const store = createStore(
-    makeRootReducer(),
+    persistedReducer,
     initialState,
     compose(
-      applyMiddleware(...middleware),
-      reduxFirestore(firebase),
       reactReduxFirebase(window.fbInstance || firebase, combinedConfig),
+      reduxFirestore(window.fbInstance || firebase),
+      applyMiddleware(...middleware),
       ...enhancers
     )
   )
@@ -83,6 +103,7 @@ export default (initialState = {}) => {
   // To unsubscribe, invoke `store.unsubscribeHistory()` anytime
   store.unsubscribeHistory = browserHistory.listen(updateLocation(store))
 
+  // Setup hot module reloading to correctly replace reducers
   if (module.hot) {
     module.hot.accept('./reducers', () => {
       const reducers = require('./reducers').default
@@ -90,5 +111,8 @@ export default (initialState = {}) => {
     })
   }
 
-  return store
+  // Setup Store Persistor
+  const persistor = persistStore(store)
+
+  return { store, persistor }
 }

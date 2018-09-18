@@ -15,6 +15,10 @@ import ProjectErrorPage from './ProjectErrorPage'
 import { withNotifications } from 'modules/notification'
 
 export default compose(
+  // Map auth uid from state to props
+  connect(({ firebase: { auth: { uid } } }) => ({ uid })),
+  // Wait for uid to exist before going further
+  spinnerWhileLoading(['uid']),
   firestoreConnect(({ params }) => [
     // Project
     {

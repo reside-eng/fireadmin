@@ -1,5 +1,17 @@
-import { size, chunk, filter, isFunction } from 'lodash'
+import { size, chunk, filter, isFunction, flatten } from 'lodash'
 import { to, promiseWaterfall } from '../utils/async'
+
+/**
+ * Check if a slash path is a doc path
+ * @param  {String} slashPath - Path to convert into firestore refernce
+ * @returns {Boolean}
+ * @example Basic
+ * isDocPath('projects') // => false
+ * isDocPath('projects/asdf') // => true
+ */
+export function isDocPath(slashPath) {
+  return (slashPath.split('/').length - 1) % 2 === 1
+}
 
 /**
  * Convert slash path to Firestore reference
@@ -7,6 +19,10 @@ import { to, promiseWaterfall } from '../utils/async'
  * create ref
  * @param  {String} slashPath - Path to convert into firestore refernce
  * @return {firestore.CollectionReference|firestore.DocumentReference}
+ * @example Subcollection
+ * const subCollectRef = slashPathToFirestoreRef(admin.firestore(), 'projects/some/events')
+ * subCollectRef.add({}) // add some doc to the subcollection
+ * // => Subcollection reference
  */
 export function slashPathToFirestoreRef(firestoreInstance, slashPath) {
   let ref = firestoreInstance
@@ -69,7 +85,12 @@ export function dataByIdSnapshot(snap) {
  * @param  {Object} opts - Options object (can contain merge)
  * @return {Promise} Resolves with results of batch commit
  */
-async function batchWriteDocs(firestoreInstance, destPath, docData, opts) {
+export async function batchWriteDocs(
+  firestoreInstance,
+  destPath,
+  docData,
+  opts
+) {
   const batch = firestoreInstance.batch()
   // Call set to dest for each doc within the original data
   docData.forEach(({ id, data }) => {
@@ -104,7 +125,12 @@ const MAX_DOCS_PER_BATCH = 500
  * @param  {Object} opts - Options object (can contain merge)
  * @return {Promise} Resolves with results of batch commit
  */
-export function writeDocsInBatches(firestoreInstance, destPath, docData, opts) {
+export async function writeDocsInBatches(
+  firestoreInstance,
+  destPath,
+  docData,
+  opts
+) {
   // Check if doc data is longer than max docs per batch
   if (docData && docData.length < MAX_DOCS_PER_BATCH) {
     console.log(
@@ -116,17 +142,24 @@ export function writeDocsInBatches(firestoreInstance, destPath, docData, opts) {
     return batchWriteDocs(firestoreInstance, destPath, docData, opts)
   }
   const docChunks = chunk(docData, MAX_DOCS_PER_BATCH)
+
   // More than max number of docs per batch - run multiple batches in succession
-  return promiseWaterfall(
+  const promiseResult = await promiseWaterfall(
     docChunks.map((dataChunk, chunkIdx) => {
-      console.log(
-        `Writing chunk #${chunkIdx} of ${
-          docChunks.length
-        } for path: ${destPath}`
-      )
-      return () => batchWriteDocs(firestoreInstance, destPath, dataChunk, opts)
+      return () => {
+        console.log(
+          `Writing chunk #${chunkIdx} of ${
+            docChunks.length
+          } for path: ${destPath}`
+        )
+        return batchWriteDocs(firestoreInstance, destPath, dataChunk, opts)
+      }
     })
   )
+
+  // Flatten array of arrays (one for each chunk) into an array of results
+  // and wrap in promise resolve
+  return flatten(promiseResult)
 }
 
 /**

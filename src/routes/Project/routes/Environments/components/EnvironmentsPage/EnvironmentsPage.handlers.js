@@ -53,6 +53,14 @@ export const addEnvironment = props => async newProjectData => {
     createdBy: uid,
     createdAt: firestore.FieldValue.serverTimestamp()
   }
+  // Reset form for future use
+  props.dispatch(reset(formNames.newEnvironment))
+  // Unselect selected service account
+  props.clearServiceAccount()
+  // Close AddEnvironmentDialog
+  props.toggleNewDialog()
+  // Show success snackbar
+  props.showSuccess('Environment added successfully')
 
   // Write new environment to project
   const [newEnvErr, newEnvironmentRes] = await to(
@@ -79,14 +87,6 @@ export const addEnvironment = props => async newProjectData => {
     projectId,
     newEnvironmentId: newEnvironmentRes.id
   })
-  // Reset form for future use
-  props.dispatch(reset(formNames.newEnvironment))
-  // Unselect selected service account
-  props.clearServiceAccount()
-  // Close AddEnvironmentDialog
-  props.toggleNewDialog()
-  // Show success snackbar
-  props.showSuccess('Environment added successfully')
 }
 
 /**
